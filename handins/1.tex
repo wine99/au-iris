@@ -1,0 +1,121 @@
+\documentclass{article}
+\usepackage{preamb/iris}
+\usepackage{preamb/heaplang}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{listings}
+\usepackage{ebproof}
+\usepackage{parskip}
+
+\title{Program Logics Hand-in 1}
+\author{Zijun Yu 202203581}
+\date{September 2023}
+
+\begin{document}
+\include{preamb/macros.tex}
+
+\maketitle
+
+\section*{Exercise 1}
+
+\subsection*{Part 1}
+
+\begin{align*}
+     & ([], [0 \mapsto \langkw{singleton} 1])                      \\
+     & \cstepsto ([], [0 \mapsto \Inr (\Ref (1, \Inl ()))])        \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto \Inr l_1])
+\end{align*}
+
+\subsection*{Part 2}
+
+\begin{align*}
+     & ([], [0 \mapsto \langkw{inc} (\langkw{singleton} 1)])                                       \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto \langkw{inc} (\Inr l_1)])                  \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto                                            \\ & \quad
+    \Match{\Inr l_1}with{\Inl x_1}=>{()}|{\Inr x_2}=>{
+    \Let{v}={\pi_1(!x_2)}in \Let{t}={\pi_2(!x_2)}in{x_2 \leftarrow (v+1, t); \langkw{inc} t}
+    }end])                                                                                         \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    \Let{v}={\pi_1(!l_1)}in \Let{t}={\pi_2(!l_1)}in{l_1 \leftarrow (v+1, t); \langkw{inc} t}])     \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    \Let{v}={\pi_1(1,\Inl())}in \Let{t}={\pi_2(!l_1)}in{l_1 \leftarrow (v+1, t); \langkw{inc} t}]) \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    \Let{v}={1}in \Let{t}={\pi_2(!l_1)}in{l_1 \leftarrow (v+1, t); \langkw{inc} t}])               \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    \Let{t}={\pi_2(!l_1)}in{l_1 \leftarrow (1+1, t); \langkw{inc} t}])                             \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    \Let{t}={\pi_2(1, \Inl())}in{l_1 \leftarrow (1+1, t); \langkw{inc} t}])                        \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    \Let{t}={\Inl()}in{l_1 \leftarrow (1+1, t); \langkw{inc} t}])                                  \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    l_1 \leftarrow (1+1, \langkw{\Inl()}); \langkw{inc} \ \Inl()])                                 \\
+     & \cstepsto ([l_1 \mapsto (1, \Inl())], [0 \mapsto
+    l_1 \leftarrow (2, \langkw{\Inl()}); \langkw{inc} \ \Inl()])                                   \\
+     & \cstepsto ([l_1 \mapsto (2, \Inl())], [0 \mapsto
+    (); \langkw{inc} \ \Inl()])                                                                    \\
+     & \cstepsto ([l_1 \mapsto (2, \Inl())], [0 \mapsto
+    \langkw{inc} \ \Inl()])                                                                        \\
+     & \cstepsto ([l_1 \mapsto (2, \Inl())], [0 \mapsto                                            \\ & \quad
+    \Match{\Inl()}with{\Inl x_1}=>{()}|{\Inr x_2}=>{
+    \Let{v}={\pi_1(!x_2)}in \Let{t}={\pi_2(!x_2)}in{x_2 \leftarrow (v+1, t); \langkw{inc} t}
+    }end])                                                                                         \\
+     & \cstepsto ([l_1 \mapsto (2, \Inl())], [0 \mapsto ()])                                       \\
+\end{align*}
+
+The syntactic sugars are not expanded in the reduction.
+
+\section*{Exercise 2}
+
+\subsection*{Approach 1}
+
+\begin{prooftree}
+    \infer0{P \star Q \vdash P}
+    \infer0{P \star Q \vdash Q}
+    \infer2{P \star Q \vdash P \wedge Q}
+\end{prooftree}
+
+\subsection*{Approach 2}
+
+Using the result from Exercise 3.
+
+\begin{prooftree}
+    \infer0{P \wedge Q \vdash P \wedge Q}
+    \infer1{P \vdash Q \wand (P \wedge Q)}
+    \infer0{Q \vdash Q}
+    \infer2{P \star Q \vdash P \wedge Q}
+\end{prooftree}
+
+\section*{Exercise 3}
+
+
+\begin{prooftree}
+    \hypo{P \vdash Q \wand R}
+    \infer0{Q \vdash Q}
+    \infer2{P \star Q \vdash R}
+\end{prooftree}
+
+\section*{Exercise 4}
+
+From left to right:
+\vspace{\baselineskip}
+
+\begin{prooftree}
+    \infer0{\Gamma \mid \exists x. P \star Q \vdash \exists x. P \star Q}
+    \infer1{\Gamma, x \mid P \star Q \vdash \exists x. P \star Q}
+    \infer1{\Gamma, x \mid Q \vdash P \wand \exists x. P \star Q}
+    \infer1{\Gamma \mid \exists x. Q \vdash P \wand \exists x. P \star Q}
+    \infer1{\Gamma \mid P \star \exists x . Q \vdash \exists x. P \star Q}
+\end{prooftree}
+
+\vspace{\baselineskip}
+From right to left:
+\vspace{\baselineskip}
+
+\begin{prooftree}
+    \infer0{\Gamma, x \mid P \vdash P}
+    \infer0{\Gamma, x \mid \exists x. Q \vdash \exists x. Q}
+    \infer1{\Gamma, x \mid Q \vdash \exists x. Q}
+    \infer2{\Gamma, x \mid P \star Q \vdash P \star \exists x. Q}
+    \infer1{\Gamma \mid \exists x. P \star Q \vdash P \star \exists x. Q}
+\end{prooftree}
+
+\end{document}

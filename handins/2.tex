@@ -1,0 +1,144 @@
+\documentclass{article}
+\usepackage{preamb/iris}
+\usepackage{preamb/heaplang}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{listings}
+\usepackage{ebproof}
+\usepackage{parskip}
+\usepackage[margin=1.2in]{geometry}
+
+\title{Program Logics Hand-in 2}
+\author{Zijun Yu 202203581}
+\date{September 2023}
+
+\begin{document}
+\include{preamb/macros.tex}
+
+\maketitle
+
+\section*{Exercise 1}
+
+\begin{center}
+    \begin{prooftree}
+        \hypo{S \vdash \{l \gmapsto 1 \} l \leftarrow 2 \{v. \wedge l \gmapsto 2 \}}
+        \infer1[\textsc{Ht-frame-invalid}]{S \vdash \{l \gmapsto 1 \wedge l \gmapsto 1 \} l \leftarrow 2 \{v. l \gmapsto 2 \wedge l \gmapsto 1 \}}
+    \end{prooftree}
+\end{center}
+
+We got to a point where we have $l \gmapsto 1 \wedge l \gmapsto 2$, suggesting that the rule is unsound.
+
+\section*{Exercise 2}
+
+We first prove the following \textsc{Ht-pre-eq} rule:
+
+\begin{center}
+    \begin{prooftree}
+        \infer0{\Gamma, x \vdash Q : Prop}
+        \hypo{\Gamma \mid S \vdash \{P[v/x]\} e[v/x] \{u.Q[v/x]\}}
+        \infer1{\Gamma, x \mid S \wedge x=v \vdash \{P[v/x]\} e[v/x] \{u.Q[v/x]\}}
+        \infer0{\Gamma, x \mid S \wedge x=v \vdash x=v}
+        \infer3[Eq]{\Gamma, x \mid S \wedge x=v \vdash \{P\} e \{u.Q\}}
+        \infer1[\textsc{Ht-eq}]{\Gamma, x \mid S \vdash \{x=v \wedge P\} e \{u.Q\}}
+    \end{prooftree}
+\end{center}
+
+Then we prove \textsc{Ht-bind-det}:
+
+\begin{center}
+    \begin{prooftree}
+        \hypo{S \vdash \{P\} e \{x.x=u \wedge Q\} }
+        \hypo{S \vdash \{Q[u/x]\} E[u] \{w.R\}}
+        \infer1[\textsc{Ht-pre-eq}]{x \mid  S \vdash \{x=u \wedge Q\} E[x] \{w.R\}}
+        \infer1{S \vdash \forall x. \{x=u \wedge Q\} E[x] \{w.R\}}
+        \infer2[\textsc{Ht-bind}]{S \vdash \{P\} E[e] \{w.R\}}
+    \end{prooftree}
+\end{center}
+
+We cannot use this rule in the case where $e=ref(0)$ as we will
+not be able to prove the middle antecedent, i.e.
+$S \vdash \{P\} ref(0) \{x.x=u \wedge Q\} $, because the result
+of $ref(0)$ is not deterministic and we might have assigned $u$
+to a location that is already allocated.
+
+\section*{Exercise 3}
+
+In this definition of linked list, each node is a pair of the value
+and either null (injection left) or the pointer (location) to the next node.
+If we expand the recursive definition of isList, by the seperating
+conjunction, we are ensured that all the locations are different, hence
+the list is acyclic.
+
+If we use ordinary conjunction, we can have a cyclic list, for example,
+let $l = \Inr (hd)$ where $hd \gmapsto (1, l)$, then $l$ is a cyclic list.
+And $l$ is a valid input to the predicate $\text{isList}$, since we can choose
+all the $l'$ to be $l$ when expanding the recursion.
+
+\section*{Exercise 4}
+
+\subsection*{Part 1}
+
+We proceed by the $\textsc{Ht-Rec}$ rule and we consider two cases:
+we use the fact that the sequence $xs$ is either empty $[]$ or
+has a head $x$ followed by another sequence $xs'$.
+
+In the first case we need to show that
+$$
+    \forall ys, l, l'. \{\text{isList} \ l \ [] \star \text{isList} \ l' \ ys\}
+    \langkw{match} \ l \ \langkw{with} ... \{v. \text{isList} \ v \ ([] ++ ys)\}
+$$
+
+Because $\text{isList \ l []} \equiv l = \Inl ()$, then by $\textsc{Ht-match}$
+and $\textsc{Ht-csq}$, our goal becomes
+$$
+    \forall ys, l'. \{l = \Inl () \star \text{isList} \ l' \ ys\} l' \{v. \text{istList} \ v \ ys\}
+$$
+
+which obviously holds. (To be precise, we need to discuss the two cases of $ys$
+again, and in each case, use $\textsc{Ht-pre-eq}$ and $\textsc{Ht-ret}$.)
+
+In the second case, we need to show that
+$$
+    \forall x, xs', ys, l, l'. \{\text{isList} \ l \ (x :: xs') \star \text{isList} \ l' \ ys\}
+    \langkw{match} \ l \ \langkw{with} ... \{v. \text{isList} \ v \ ((x :: xs') ++ ys)\}
+$$
+where
+$$
+    \text{isList} \ l \ (x :: xs') \equiv \exists hd, t. l=\Inr hd * hd \gmapsto (x, t) * \text{isList} \ t \ xs'
+$$
+
+Thus we can prove
+$$
+    \{l = \Inr hd \star hd \gmapsto (x, t) \star \text{isList} \ t \ xs' \} l \{v. v= \Inr hd \star l = \Inr hd \star hd \gmapsto (x, t) \star \text{isList} \ t \ xs' \}
+$$
+
+In this case, the second branch of the match is taken, and by the derived rule from
+exercise 4.10, we proceed to verify the body of the second branch.
+
+We initially have
+
+$\{l = \Inr hd \star hd \gmapsto (x, t) \star \text{isList} \ t \ xs' \}$.
+
+After processing $\Let{p}={!hd}in$, we have
+
+$\{p=(x,t) \star l = \Inr hd \star hd \gmapsto (x, t) \star \text{isList} \ t \ xs' \}$
+
+After processing $\Let{r}={\langkw{append}}in$, using the induction hypothesis introduced
+by $\textsc{Ht-Rec}$, we have
+
+$\{\text{isList} \ r \ (xs' ++ ys) \star p=(x,t) \star l = \Inr hd \star hd \gmapsto (x, t) \star \text{isList} \ t \ xs' \}$
+
+After processing $hd \leftarrow (\pi_1 p, r)$, we have
+
+$\{\text{isList} \ r \ (xs' ++ ys) \star p=(x,t) \star l = \Inr hd \star hd \gmapsto (x, r) \star \text{isList} \ t \ xs' \}$
+
+and we are left to prove that the value of the $\Inr hd$ is the sequence we want, i.e.
+$\text{isList} \ v \ (xs ++ ys)$, which is true since $x::(xs'++ys) = (x::xs')++ys = xs++ys$.
+
+
+\subsection*{Part 2}
+
+No. Because if we use this specification on $\langkw{append} \ l \ l$, we will get a
+cyclic list as the result, and we will not be able to prove
+$\text{isList} \ v \ (xs ++ xs)$.
+
+\end{document}

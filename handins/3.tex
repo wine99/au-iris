@@ -1,0 +1,146 @@
+\documentclass{article}
+\usepackage{preamb/iris}
+\usepackage{preamb/heaplang}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{listings}
+\usepackage{ebproof}
+\usepackage{parskip}
+\usepackage[margin=1.2in]{geometry}
+
+\title{Program Logics Hand-in 3}
+\author{Zijun Yu 202203581}
+\date{Octobor 2023}
+
+\begin{document}
+\include{preamb/macros.tex}
+
+\maketitle
+
+\section*{Exercise 1}
+
+By applying $\textsc{Ht-beta}$, $\textsc{Ht-bind}$, and $\textsc{Ht-alloc}$,
+it suffices to show
+\begin{align*}
+    \forall v. \{\exists l. v=l \wedge l \gmapsto 0\}
+    \Let{x}={v}in{(\lambda \_ . x \leftarrow !x+1, \lambda \_ . !x)}
+    \{\text{The original postcondition}\}
+\end{align*}
+We introduce $v$ and apply $\textsc{Ht-let-bind}$, $\textsc{Ht-exist}$,
+$\forall \text{I}$ (to introduce $l$), and $\textsc{EQ}$, then it suffices to show
+\begin{align*}
+    \{l \gmapsto 0\}
+    (\lambda \_ . l \leftarrow !l+1, \lambda \_ . !l)
+    \{\text{The original postcondition}\}
+\end{align*}
+We instantiate $C$ to $\lambda n. l \gmapsto n$ and the goal becomes:
+\begin{align*}
+    \{l \gmapsto 0\}
+    (\lambda \_ . l \leftarrow !l+1, \lambda \_ . !l)
+    \left\{
+    v.\begin{array}{l}
+          l \gmapsto 0 \star                                                           \\
+          \forall n. \{l \gmapsto n\} v.inc() \{u.u=() \wedge l \gmapsto (n+1)\} \star \\
+          \forall n. \{l \gmapsto n\} v.read() \{u.u=n \wedge l \gmapsto n\}
+      \end{array}
+    \right\}
+\end{align*}
+Then, it suffices to show the following three goals:
+\begin{align*}
+     & \{l \gmapsto 0\}
+    (\lambda \_ . l \leftarrow !l+1, \lambda \_ . !l)
+    \{v.l \gmapsto 0\}                                                            \\
+     & \{True\}
+    (\lambda \_ . l \leftarrow !l+1, \lambda \_ . !l)
+    \{v. \forall n. \{l \gmapsto n\} v.inc() \{u.u=() \wedge l \gmapsto (n+1)\}\} \\
+     & \{True\}
+    (\lambda \_ . l \leftarrow !l+1, \lambda \_ . !l)
+    \{v. \forall n. \{l \gmapsto n\} v.read() \{u.u=n \wedge l \gmapsto n\}\}
+\end{align*}
+The first one is trivial. The second and the third are similar and we only show the former.
+For the second one, it suffices to show
+\begin{align*}
+    \forall n. \{l \gmapsto n\} \left( \pi_1 (\lambda \_ . l \leftarrow !l+1, \lambda \_ . !l) \right) () \{u.u=() \wedge l \gmapsto (n+1)\}
+\end{align*}
+By applying $\forall$I, $\textsc{Ht-bind-det}$, $\textsc{Ht-proj}$, and $\textsc{Ht-beta}$, it suffices to show
+\begin{align*}
+    \{l \gmapsto n\} l \leftarrow !l+1 \{u.u=() \wedge l \gmapsto (n+1)\}
+\end{align*}
+which is straightforward by $\textsc{Ht-bind-det}$, $\textsc{Ht-load}$, and $\textsc{Ht-store}$.
+
+\section*{Exercise 2}
+
+\subsection*{Item 1}
+
+We first do case analysis on $\text{listFilter} \ P \ ys$. It is either
+$[]$ or some non-empty sequence $y' :: ys'$.
+
+If $\text{listFilter} \ P \ ys \equiv []$, then we have that
+$\text{isList} \ a' \ [] \equiv a' = \Inl()$. Then by applying
+$\textsc{Ht-beta}$, $\textsc{Ht-bind-det}$,
+$\textsc{Ht-proj}$ several times, our goal becomes
+$$
+    \{a' = \Inl()\}
+    \If{p \ x'}then{\Inr(\Ref(x',\Inl()))}\Else{\Inl()}
+    \{v. \text{isList} \ v \ (\text{listFilter} \ P \ [x'])\}
+$$
+Then we apply $\textsc{Ht-bind}$ with $Q$ beging instantiated to
+the postcondition of the assumption
+$\forall x. \{True\} P \ x \{v. \ \text{isBool} \ v \star v = P \ x\}$.
+We then do case analysis on $P \ x'$. In each case, we apply
+$\textsc{Ht-if-true}$ and $\textsc{Ht-if-false}$ respectively, and
+the rest of the proof is straightforward.
+
+In the case where $\text{listFilter P ys}$ is not empty,
+according to the definition of isList, we have that for some
+$hd$ and $l'$, $a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' $.
+Now again, by applying
+$\textsc{Ht-beta}$, $\textsc{Ht-bind-det}$,
+$\textsc{Ht-proj}$ several times, our goal becomes
+\begin{align*}
+     & \{a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' \star \text{isList} \ \Inr(hd) \ (\text{listFilter} \ P \ ys)\} \\
+     & \ \ \If{p \ x'}then{\Inr(\Ref(x', \Inr(hd)))}\Else{\Inr(hd)}                                                                      \\
+     & \{v. \text{isList} \ v \ (\text{listFilter P (x' :: ys)})\}
+\end{align*}
+We again apply $\textsc{Ht-bind}$ and do case analysis on $P \ x'$. In the case where
+$P \ x' = \True$, after unfolding listFilter and isList once, we need to show
+\begin{align*}
+     & \{a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' \star \text{isList} \ \Inr(hd) \ (\text{listFilter} \ P \ ys)\} \\
+     & \ \ {\Inr(\Ref(x', \Inr(hd)))}                                                                                                    \\
+     & \{v. \exists hd', l'. v = \Inr(hd) \star hd' \gmapsto (x', l') \star \text{isList} \ l' \ (\text{listFilter P ys})\}
+\end{align*}
+Then we use $\textsc{Ht-bind}$ to evaluate $\Ref(x', \Inr(hd))$, and we are left to prove two sub-goals:
+
+1.
+\begin{align*}
+     & \{a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' \star \text{isList} \ \Inr(hd) \ (\text{listFilter} \ P \ ys)\}                                                                  \\
+     & \ \ \Ref(x', \Inr(hd))                                                                                                                                                                             \\
+     & \{v. \exists hd'. v = hd' \wedge hd' \gmapsto (x', \Inr(hd)) \star a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' \star \text{isList} \ \Inr(hd) \ (\text{listFilter} \ P \ ys)\} \\
+\end{align*}
+2.
+\begin{align*}
+    \forall v. & \{\exists hd'. v = hd' \wedge hd' \gmapsto (x', \Inr(hd)) \star a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' \star \text{isList} \ \Inr(hd) \ (\text{listFilter} \ P \ ys)\} \\
+               & \ \ \Inr(v)                                                                                                                                                                                     \\
+               & \{v. \exists hd', l'. v = \Inr(hd') \star hd' \gmapsto (x', l') \star \text{isList} \ l' \ (\text{listFilter P ys})\}
+\end{align*}
+The first is by $\textsc{Ht-alloc}$. For the second one, it suffices to show
+\begin{align*}
+     & \{hd' \gmapsto (x', \Inr(hd)) \star a' = \Inr(hd) \star hd \gmapsto (y, l') \star isList \ l' \ ys' \star \text{isList} \ \Inr(hd) \ (\text{listFilter} \ P \ ys)\} \\
+     & \ \ \Inr(hd')                                                                                                                                                       \\
+     & \{v. \exists hd', l'. v = \Inr(hd') \star hd' \gmapsto (x', l') \star \text{isList} \ l' \ (\text{listFilter P ys})\}
+\end{align*}
+where we instantiate $hd'$ and $l'$ in the postcondition to $hd'$ and $\Inr(hd)$ respectively and then it is trivial to show.
+
+Similarly, we can prove this item in the case where $P \ x' = \False$.
+
+\subsection*{Item 2}
+
+We do induction on $xs$. If $xs = []$, it is trivial.
+In the case where $xs = x :: xs'$, we need to prove $all \ (\lambda x. True) \ (x :: xs')$.
+It suffices to show that $(\lambda x. True)$, which reduces to $True$, and $all \ (\lambda x. True) \ xs'$,
+which is exactly the assumption and the induction hypothesis.
+
+\subsection*{Item 3}
+
+Plug in the definition, it suffices to show $\Inl() = \Inl()$, which is true.
+
+\end{document}

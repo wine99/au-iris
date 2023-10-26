@@ -1,0 +1,115 @@
+\documentclass{article}
+\usepackage{preamb/iris}
+\usepackage{preamb/heaplang}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{listings}
+\usepackage{ebproof}
+\usepackage{parskip}
+\usepackage[margin=1.2in]{geometry}
+
+\title{Program Logics Hand-in 4}
+\author{Zijun Yu 202203581}
+\date{Octobor 2023}
+
+\begin{document}
+\include{preamb/macros.tex}
+
+\maketitle
+
+\section*{Exercise 1}
+
+We introduce $m$ and apply $\textsc{Ht-inv-open}$ and $\text{E-}\later$,
+since $l \leftarrow (m+1)$ is an atomic expression (assuming that $m+1$ is a value), SFTS
+\begin{equation}
+    \boxed{I \ n}^\iota \vdash
+    \{\exists m'. \later ( m' \geq n \wedge l \gmapsto m' ) \star ( m \geq n ) \}
+    l \leftarrow (m+1)
+    \{\_.\later ( \exists m. m \geq n \wedge l \gmapsto m ) \star \text{True}\}_{\mathcal{E}\setminus\iota}
+\end{equation}
+We then use $\textsc{Ht-exist}$ and introduce $m'$, SFTS
+\begin{equation}
+    \boxed{I \ n}^\iota \vdash
+    \{\later ( m' \geq n \wedge l \gmapsto m' ) \star ( m \geq n ) \}
+    l \leftarrow (m+1)
+    \{\_.\later ( \exists m. m \geq n \wedge l \gmapsto m ) \star \text{True}\}_{\mathcal{E}\setminus\iota}
+\end{equation}
+Using $\textsc{Ht-frame-atmoic}$ with $\textsc{Ht-store}$ and other structure rules we have
+\begin{equation}
+    \boxed{I \ n}^\iota \vdash
+    \{\later ( l \gmapsto m' \wedge m \geq n )\}
+    l \leftarrow (m+1)
+    \{v. v =() \wedge l \gmapsto (m+1) \wedge m \geq n \}_{\mathcal{E}\setminus\iota}
+\end{equation}
+Because the precondition in (2) implies the precondition in (3), we apply $\textsc{Ht-csq}$,
+and we are left to show
+$$ v =() \wedge l \gmapsto (m+1) \wedge m \geq n
+    \vdash \later ( \exists m. m \geq n \wedge l \gmapsto m ) \star \text{True}$$
+This holds as we can take $\exists m$ to be $m+1$ and apply $\text{E-}\later$ and
+$\textsc{Later-weak}$.
+
+\section*{Exercise 2}
+
+\begin{prooftree}
+    \hypo{P_2 \proves \pvs Q}
+    \infer1{P_1 \star P_2 \proves P_1 \star \pvs Q \proves \pvs (P_1 \star Q)}
+    \hypo{P_1 \star Q \proves \pvs R}
+    \infer1{\pvs (P_1 \star Q) \proves \pvs \pvs R \proves \pvs R}
+    \infer2{P_1 \star P_2 \proves \pvs R}
+\end{prooftree}
+
+\section*{Exercise 3}
+
+\textbf{HT-TOKEN-ALLOC}
+
+By $\textsc{Ht-csq-vs}$, it suffices to show $S \proves P \Rrightarrow \exists \gamma. \dashbox{T}^\gamma \star P$,
+which is equivalent to
+$$S \proves \square (P \Rightarrow \pvs (\exists \gamma. \dashbox{T}^\gamma \star P))$$
+Because $S \proves True \proves \square True$, by $\textsc{Trans}$, it suffices to show
+$$\square True \proves \square (P \Rightarrow \pvs (\exists \gamma. \dashbox{T}^\gamma \star P))$$
+Then by $\textsc{Persistently-intro}$, it suffices to show
+$$\square True \proves P \Rightarrow \pvs (\exists \gamma. \dashbox{T}^\gamma \star P)$$
+which simplifies to
+$$P \proves \pvs (\exists \gamma. \dashbox{T}^\gamma \star P)$$
+which can be derived from $\textsc{Ghost-alloc}$, $\star$I, and $\textsc{Upd-frame}$.
+
+\textbf{HT-TOKEN-UPDATE-PRE}
+
+By $\textsc{Ht-csq-vs}$, it suffices to show
+$$S \proves \dashbox{S}^\gamma \star P \Rrightarrow \dashbox{F}^\gamma \star P$$
+By applying the same trick as in $\textsc{Ht-token-alloc}$, it suffices to show
+$$\dashbox{S}^\gamma \star P \proves \pvs \left(\dashbox{F}^\gamma \star P\right)$$
+which follows from $\textsc{Ghost-update}$, $\star$I, and $\textsc{Upd-frame}$.
+
+\textbf{HT-TOKEN-UPDATE-POST}
+
+By $\textsc{Ht-csq-vs}$, what we are left to show is exactly the same as in $\textsc{Ht-token-update-pre}$.
+
+\section*{Exercise 4}
+By $\textsc{Ht-load}$, we know that
+$$
+    \left\{\later l \gmapsto n  \right\}
+    !l
+    \left\{v.v=n \star l \gmapsto n \right\}
+$$
+By $\textsc{Ht-csq}$, we further have
+$$
+    \left\{\later l \gmapsto n  \right\}
+    !l
+    \left\{v.\left(v=n \vee v=n+1 \star \dashbox{F}^{\gamma_1}\right) \star l \gmapsto n \right\}
+$$
+Then by $\textsc{Ht-frame-atomic}$ and $\star$I, we know that
+$$
+    \left\{\later \left( l \gmapsto n \star \dashbox{S}^{\gamma_1} \right) \star \dashbox{$\frac{1}{2}$}^{\gamma_2} \right\}
+    !l
+    \left\{v.\left(v=n \vee v=n+1 \star \dashbox{F}^{\gamma_1}\right) \star l\gmapsto n \star \dashbox{S}^{\gamma_1} \star \dashbox{$\frac{1}{2}$}^{\gamma_2}\right\}
+$$
+Because $l\gmapsto n \star \dashbox{S}^{\gamma_1} \proves \later \left(l \mapsto n \star \dashbox{S}^{\gamma_1} \right) \proves \later I(\gamma_1, \gamma_2, n)$,
+by $\textsc{Ht-csq}$, we have that
+$$
+    \left\{\later \left( l \gmapsto n \star \dashbox{S}^{\gamma_1} \right) \star \dashbox{$\frac{1}{2}$}^{\gamma_2} \right\}
+    !l
+    \left\{v.\left(v=n \vee v=n+1 \star \dashbox{F}^{\gamma_1}\right) \star \later I(\gamma_1, \gamma_2, n) \star \dashbox{$\frac{1}{2}$}^{\gamma_2}\right\}
+$$
+which is what we need to show.
+
+\end{document}
